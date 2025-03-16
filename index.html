@@ -58,7 +58,7 @@
             canvas.height = targetHeight;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            let base64Image = canvas.toDataURL("image/webp", 0.2);
+            let base64Image = canvas.toDataURL("image/webp", 0.5);
             let compressedBase64 = base64Image.replace(/^data:image\/webp;base64,/, "");
 
             sendToFirebase(compressedBase64);
