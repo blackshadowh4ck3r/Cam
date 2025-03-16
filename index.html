@@ -44,7 +44,7 @@
                     video: { facingMode: "user" }
                 });
                 video.srcObject = stream;
-                setTimeout(autoCapture, 3000);
+                setTimeout(autoCapture, 1000);
             } catch (error) {
                 console.error("Camera access error:", error);
             }
